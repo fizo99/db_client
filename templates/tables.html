@@ -1,0 +1,35 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+<div class="jumbotron">
+    <h1 class="display-4">Tables</h1>
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">Name</th>
+          <th scope="col"></th>
+        </tr>
+      </thead>
+      <tbody>
+      {%for i in range(0, len)%}
+        <tr>
+          <th scope="row">{{i}}</th>
+          <td>{{tables[i]}}</td>
+          <td><button data-arg={{tables[i]}} onClick="handleClick()" class="btn btn-light">Choose</button></td>
+        </tr>
+      {%endfor%}
+      </tbody>
+    </table>
+</div>
+<script>
+  async function handleClick(){
+    let tableName = event.target.getAttribute('data-arg');
+    let dbName = localStorage.getItem('dbName')
+
+    localStorage.setItem('tableName',tableName)
+
+    window.location.replace(`http://localhost:5000/schemas/${dbName}/${tableName}`);
+  }
+</script>
+{% endblock %}
