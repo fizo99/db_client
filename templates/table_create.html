@@ -1,0 +1,106 @@
+{% extends 'layout.html' %}
+{% block body %}
+<div class="jumbotron">
+    <input id = "tableNameField" class="form-control col-8 mb-5" type="text" placeholder="Insert table name">
+    <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">Column name</th>
+            <th scope="col">Data type</th>
+          </tr>
+        </thead>
+        <tbody id="fields">
+
+          <tr>
+            <th scope="row">0</th>
+            <td>
+                <input class="form-control col-8" type="text" placeholder="insert column name">
+            </td>
+            <td>
+                <select class="form-control">
+                    <option selected value="int">int</option>
+                    <option value="float">float</option>
+                    <option value="varchar">varchar</option>
+                </select>
+            </td>
+          </tr>
+
+        </tbody>
+      </table>
+      <div class="d-flex flex-row-reverse mt-5">
+        <button onClick="newField()" class="btn btn-light col-2 ml-2">Add field</button>
+        <button onClick="save()" class="btn btn-light col-2 ml-2">Save</button>
+      </div>
+</div>
+<script>
+  let i = 1;
+  const table = document.getElementById("fields")
+  async function save(){
+    const dbName = localStorage.getItem('dbName')
+    const tableName = document.getElementById('tableNameField').value;
+    const rows = document.getElementById('fields').children;
+
+    if(tableName == ""){
+      alert("Insert table name")
+      return
+    }
+    const tableInfo = []
+    
+    for(let i = 0; i < rows.length; i++){
+      const row = rows.item(i);
+      const columnName = row.children.item(1).children.item(0).value
+      const dataType = row.children.item(2).children.item(0).value
+
+      if(columnName == ""){
+        alert("Insert column name")
+        return
+      }
+
+      tableInfo.push({
+        "column_name": columnName,
+        "data_type": dataType
+      })
+    }
+
+    fetch("http://localhost:5000/table/create", {
+      method: 'POST', 
+      headers: {
+        'Content-Type': "application/json",
+        'dbName': dbName,
+        'tableName': tableName
+      },
+      body: JSON.stringify(tableInfo)
+    }).then(res => res.json())
+    .then(json => {
+      if(json.success == true){
+        alert("Table created!")
+      }else{
+        alert("Error!")
+      }
+    })
+  }
+
+  async function newField(){
+    const nextRow = document.createElement("tr");
+    const rowContent = newRow(i)
+    nextRow.innerHTML = rowContent.trim();
+    table.appendChild(nextRow);
+    i++;
+  }
+  function newRow(i) {
+      return `
+            <th scope="row">${i}</th>
+            <td>
+                <input class="form-control col-8" type="text" placeholder="Insert name">
+            </td>
+            <td>
+                    <select class="form-control">
+                        <option selected value="int">int</option>
+                        <option value="float">float</option>
+                        <option value="varchar">varchar</option>
+                      </select>
+            </td>`
+  }
+</script>
+{% endblock %}

@@ -1,5 +1,6 @@
 import os,fnmatch
 import sqlite3
+import json
 
 def getDatabaseNames():
     result = []
@@ -78,6 +79,32 @@ def createDB(dbName):
         return {
             "type": "ok",
             "msg": "Database created."
+        }
+    except sqlite3.Error as e:
+        return {
+            "type": "error",
+            "msg": "An error occurred: " + e.args[0]
+        }
+    finally:
+        if conn:
+            conn.close()
+
+def createTable(dbName,tableName, tableContent):
+    tableContent = list(tableContent)
+    statement = f'create table {tableName}('
+    for column in tableContent:
+        statement += column['column_name'] + " " + column['data_type'] + ","
+    statement = "".join(list(statement)[:-1]) + ");"
+
+    conn = None
+    try:
+        path = os.path.join(os.getcwd(), 'databases', dbName)
+        connection = sqlite3.connect(path)
+        cur = connection.cursor()
+        cur.execute(statement)
+        return{
+            "type": "ok",
+            "msg": "Table created"
         }
     except sqlite3.Error as e:
         return {

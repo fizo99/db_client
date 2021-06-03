@@ -12,12 +12,32 @@
           <a class="nav-link" href="/">Databases</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="/schema">Schemas</a>
+          <a onclick="handleCreate()" class="nav-link" href="javascript:void(0);">Create Table</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="/data">Data</a>
+          <a onclick="handleModify()" class="nav-link" href="javascript:void(0);">Modify Table</a>
         </li>
       </ul>
     </div>
   </div>
 </nav>
+<script>
+  function handleModify() {
+    const dbName = localStorage.getItem('dbName')
+    if(dbName == null){
+      alert("Choose database");
+      window.location.replace(`http://localhost:5000/`);
+    }else{
+      window.location.replace(`http://localhost:5000/table/modify`);
+    }
+  }
+  function handleCreate() {
+    const dbName = localStorage.getItem('dbName')
+    if(dbName == null){
+      alert("Choose database");
+      window.location.replace(`http://localhost:5000/`);
+    }else{
+      window.location.replace(`http://localhost:5000/table/create`);
+    }
+  }
+</script>
