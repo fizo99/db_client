@@ -21,15 +21,28 @@
       {%endfor%}
       </tbody>
     </table>
+    <div class="d-flex flex-row-reverse mt-5">
+      <button onClick="createTable()" class="btn btn-light col-2 ml-2">Create</button>
+      <input class="form-control col-3" type="text" id="tableNameField" placeholder="Table name">
+    </div>
 </div>
 <script>
   async function handleClick(){
-    let tableName = event.target.getAttribute('data-arg');
-    let dbName = localStorage.getItem('dbName')
+    const tableName = event.target.getAttribute('data-arg');
+    const dbName = localStorage.getItem('dbName')
 
     localStorage.setItem('tableName',tableName)
 
     window.location.replace(`http://localhost:5000/schemas/${dbName}/${tableName}`);
   }
+  async function createTable(){
+    const tableName = document.querySelector("#tableNameField").value;
+    const dbName = localStorage.getItem('dbName')
+    localStorage.setItem('tableName', tableName)
+
+    window.location.replace(`http://localhost:5000/schemas/new/${dbName}/${tableName}`);
+
+  }
+
 </script>
 {% endblock %}
