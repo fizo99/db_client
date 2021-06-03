@@ -36,10 +36,23 @@ def schema(dbName,tableName):
     tableSchema = db.getTableStructure(dbName,tableName)
     return render_template('schema.html', rows=tableSchema['resultList'], len=len(tableSchema['resultList']))
 
+@app.route('/schemas/new/<dbName>/<tableName>')
+def newtableschema(dbName,tableName):
+    return render_template('newtable.html', tableName = tableName)
+
+
 
 @app.route('/data')
 def data():
     return render_template('data.html', app_data=app_data)
+
+@app.route('/database/create/<dbname>')
+def dbcreator(dbname):
+    result = db.createDB(dbname)
+    if result['type'] == 'ok':
+        return result, 201
+    else:
+        return result, 400
 
 
 if __name__ == '__main__':

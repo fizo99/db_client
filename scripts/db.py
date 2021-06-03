@@ -62,3 +62,28 @@ def getTableStructure(dbName, tableName):
     finally:
         if connection:
             connection.close()
+
+def createDB(dbName):
+    dbName = dbName + ".db"
+    dbs = getDatabaseNames()
+    if dbName in dbs:
+        return {
+            "type": "error",
+            "msg": "Database exists."
+        }
+    conn = None
+    try:
+        path = os.path.join(os.getcwd(), 'databases', dbName)
+        connection = sqlite3.connect(path)
+        return {
+            "type": "ok",
+            "msg": "Database created."
+        }
+    except sqlite3.Error as e:
+        return {
+            "type": "error",
+            "msg": "An error occurred: " + e.args[0]
+        }
+    finally:
+        if conn:
+            conn.close()
