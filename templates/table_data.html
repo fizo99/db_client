@@ -1,0 +1,154 @@
+{% extends 'layout.html' %}
+{% block body %}
+<div class="jumbotron bg-white shadow p-3 mb-5 rounded">
+    <h1 class="display-4 mb-5">Table data</h1>
+    <select class="form-control mb-5" id="tables">
+        <option value="" disabled selected>
+            Choose table
+        </option>
+    </select>
+</div>
+<script>
+    document.getElementById("nav-3").className = "nav-link text-light"
+    let newFieldTemplate;
+    const tablesSelect = document.getElementById("tables")
+    window.onload = () => {
+        const dbName = localStorage.getItem('dbName')
+        fetch("http://localhost:5000/table", {
+            method: 'GET', 
+            headers: {
+                'Content-Type': "application/json",
+                'dbName': dbName,
+            },
+            }).then(res => res.json())
+            .then(json => {
+                const resultList = json.resultList;
+                for(let i = 0; i < resultList.length; i++){
+                    const option = document.createElement('option')
+                    option.value = resultList[i];
+                    option.innerText = resultList[i];
+                    tablesSelect.appendChild(option)
+                }
+            })
+    }
+    tablesSelect.addEventListener('change', (event) => {
+        const tableName = event.target.value;
+        localStorage.setItem('tableName', tableName)
+        const dbName = localStorage.getItem('dbName')
+        fetch(`http://localhost:5000/table/data/${tableName}`, {
+            method: 'GET', 
+            headers: {
+                'Content-Type': "application/json",
+                'dbName': dbName
+            }}).then(res => res.text())
+            .then(text => {
+                document.body.innerHTML = text
+                const container = document.querySelector(".jumbotron")
+                container.insertBefore(tablesSelect, container.children.item(1))
+                newFieldTemplate = document.getElementById('newFieldTemplate').cloneNode(true)
+            })
+    });
+
+    function newField(){
+       const fields = document.getElementById('fields');
+       fields.appendChild(newFieldTemplate.cloneNode(true));
+     }
+    function remove(e){
+        return e.parentNode.parentNode.remove()
+    }
+    function save(e){
+        const tableValues = e.parentNode.parentNode.children;
+        const values = []
+        for(let i = 0; i < tableValues.length-2; i++){
+            const el = tableValues.item(i).children.item(0)
+            const pattern = el.getAttribute("pattern");
+            if(pattern != null){
+                const re = new RegExp(pattern);
+                if (!re.test(el.value)) {
+                    alert("Invalid values!")
+                    el.style.borderColor = "red";
+                    return;
+                }else{
+                    el.style.borderColor = "";
+                }
+            }
+            
+            const value = el.value;
+            values.push(value)
+        }
+        
+        const dbName = localStorage.getItem('dbName')
+        const tableName = localStorage.getItem('tableName')
+
+        fetch("http://localhost:5000/table/data/modify", {
+            method: 'PUT', 
+            headers: {
+                'Content-Type': "application/json",
+                'dbName': dbName,
+                'tableName': tableName,
+            },
+            body: JSON.stringify({
+                "values": values,
+            })
+            })
+            .then(res => res.json())
+            .then(json => {
+                if(json.success){
+                    alert("Row inserted!")
+                    for(let i = 0; i < tableValues.length-2; i++){
+                        const el = tableValues.item(i).children.item(0)
+                        const val = el.value
+                        
+                        tableValues.item(i).innerHTML = val
+                    }
+                    tableValues.item(tableValues.length-1).remove()
+                    
+                    const delete_element = tableValues.item(tableValues.length-1).children.item(0)
+                    delete_element.setAttribute('onclick','removeFromDb(this)');
+                }else{
+                    alert("Error!")
+                }
+            })
+    }
+    function removeFromDb(e){
+        const tableHeaders = e.parentNode.parentNode.parentNode.parentNode.children.item(0).children.item(0).children
+        const columnNames = []
+        const values = []
+        for(let i = 0; i < tableHeaders.length; i++){
+            const nameWithType = tableHeaders.item(i).innerText
+            const id = nameWithType.indexOf("(")
+            columnNames.push(nameWithType.substring(0,id-1))
+        }
+        
+        const tableValues = e.parentNode.parentNode.children;
+        for(let i = 0; i < tableValues.length-1; i++){
+            const value = tableValues.item(i).innerText == "None" ? null : tableValues.item(i).innerText
+            values.push(value)
+        }
+        
+        const dbName = localStorage.getItem('dbName')
+        const tableName = localStorage.getItem('tableName')
+        fetch("http://localhost:5000/table/data/modify", {
+            method: 'DELETE', 
+            headers: {
+                'Content-Type': "application/json",
+                'dbName': dbName,
+                'tableName': tableName,
+            },
+            body: JSON.stringify({
+                "columnNames": columnNames,
+                "values": values,
+            })
+            })
+            .then(res => res.json())
+            .then(json => {
+                if(json.success){
+                    alert("Row deleted!")
+                    remove(e)
+                }else{
+                    alert("Error!")
+                }
+            })
+    }
+</script>
+{% endblock %}

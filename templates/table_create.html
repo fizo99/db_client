@@ -1,11 +1,11 @@
 {% extends 'layout.html' %}
 {% block body %}
-<div class="jumbotron">
+<div class="jumbotron bg-white shadow p-3 mb-5 rounded">
+    <h1 class="display-4 mb-5">Table creator</h1>
     <input id = "tableNameField" class="form-control col-8 mb-5" type="text" placeholder="Insert table name">
     <table class="table">
         <thead>
           <tr>
-            <th scope="col">#</th>
             <th scope="col">Column name</th>
             <th scope="col">Data type</th>
           </tr>
@@ -13,9 +13,8 @@
         <tbody id="fields">
 
           <tr>
-            <th scope="row">0</th>
             <td>
-                <input class="form-control col-8" type="text" placeholder="insert column name">
+                <input class="form-control col-8" type="text" placeholder="Insert column name">
             </td>
             <td>
                 <select class="form-control">
@@ -24,17 +23,20 @@
                     <option value="varchar">varchar</option>
                 </select>
             </td>
+            <td>
+              <button onclick="return this.parentNode.parentNode.remove()" class="btn"><i class="fa fa-times"></i></button>
+            </td>
           </tr>
 
         </tbody>
       </table>
       <div class="d-flex flex-row-reverse mt-5">
-        <button onClick="newField()" class="btn btn-light col-2 ml-2">Add field</button>
-        <button onClick="save()" class="btn btn-light col-2 ml-2">Save</button>
+        <button onClick="newField()" class="btn btn-secondary col-2 ml-2">Add field</button>
+        <button onClick="save()" class="btn btn-info col-2 ml-2">Save</button>
       </div>
 </div>
 <script>
-  let i = 1;
+  document.getElementById("nav-1").className = "nav-link text-light"
   const table = document.getElementById("fields")
   async function save(){
     const dbName = localStorage.getItem('dbName')
@@ -52,7 +54,7 @@
       const columnName = row.children.item(1).children.item(0).value
       const dataType = row.children.item(2).children.item(0).value
 
-      if(columnName == ""){
+      if(columnName == null || columnName == ""){
         alert("Insert column name")
         return
       }
@@ -83,16 +85,14 @@
 
   async function newField(){
     const nextRow = document.createElement("tr");
-    const rowContent = newRow(i)
+    const rowContent = newRow()
     nextRow.innerHTML = rowContent.trim();
     table.appendChild(nextRow);
-    i++;
   }
-  function newRow(i) {
+  function newRow() {
       return `
-            <th scope="row">${i}</th>
             <td>
-                <input class="form-control col-8" type="text" placeholder="Insert name">
+                <input class="form-control col-8" type="text" placeholder="Insert column name">
             </td>
             <td>
                     <select class="form-control">
@@ -100,6 +100,9 @@
                         <option value="float">float</option>
                         <option value="varchar">varchar</option>
                       </select>
+            </td>
+            <td>
+              <button onclick="return this.parentNode.parentNode.remove()" class="btn"><i class="fa fa-times"></i></button>
             </td>`
   }
 </script>

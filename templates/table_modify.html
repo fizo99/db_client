@@ -1,10 +1,220 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends 'layout.html' %}
+{% block body %}
+<div class="jumbotron bg-white shadow p-3 mb-5 rounded">
+    <h1 class="display-4 mb-5">Table structure modifier</h1>
+    <label>Table name</label>
+    <select class="form-control mb-5" id="tables">
+        <option value="" disabled selected>
+            Choose table
+        </option>
+    </select>
+    <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Column name</th>
+            <th scope="col">Data type</th>
+          </tr>
+        </thead>
+        <tbody id="fields">
+        </tbody>
+      </table>
+      <div class="d-flex flex-row-reverse mt-5">
+        <button onClick="newField()" class="btn btn-secondary col-2 ml-2">Add field</button>
+      </div>
+</div>
+<script>
+    document.getElementById("nav-2").className = "nav-link text-light"
+    const tablesSelect = document.getElementById("tables")
+    const fields = document.getElementById("fields")
+    window.onload = () => {
+        const dbName = localStorage.getItem('dbName')
+        fetch("http://localhost:5000/table", {
+            method: 'GET', 
+            headers: {
+                'Content-Type': "application/json",
+                'dbName': dbName,
+            },
+            }).then(res => res.json())
+            .then(json => {
+                const resultList = json.resultList;
+                for(let i = 0; i < resultList.length; i++){
+                    const option = document.createElement('option')
+                    option.value = resultList[i];
+                    option.innerText = resultList[i];
+                    tablesSelect.appendChild(option)
+                }
+            })
+    }
+    tablesSelect.addEventListener('change', (event) => {
+        fields.innerHTML = ""
+        const dbName = localStorage.getItem('dbName')
+        const tableName = event.target.value;
+        fetch("http://localhost:5000/table/schemas", {
+            method: 'GET', 
+            headers: {
+                'Content-Type': "application/json",
+                'dbName': dbName,
+                'tableName': tableName,
+            },
+            }).then(res => res.json())
+            .then(json => {
+                const resultList = json.resultList;
+                for(let i = 0; i < resultList.length; i++){
+                    const result = resultList[i];
+                    fields.appendChild(existingField(result.lp, result.column_name, result.data_type))
+                }
+            })
+    });
 
-</body>
-</html>
+
+  async function newField(){
+    const nextRow = document.createElement("tr");
+    const rowContent = newRow()
+    nextRow.innerHTML = rowContent.trim();
+    fields.appendChild(nextRow);
+  }
+  function newRow() {
+      return `
+            <td>
+                <input class="form-control col-8" type="text" placeholder="Insert name">
+            </td>
+            <td>
+                    <select class="form-control">
+                        <option selected value="int">int</option>
+                        <option value="float">float</option>
+                        <option value="varchar">varchar</option>
+                      </select>
+            </td>
+            <td>
+              <button onclick="remove(this)" class="btn"><i class="fa fa-times"></i></button>
+              <button onclick="saveColumn(this)" class="btn"><i class="fa fa-save"></i></button>
+            </td>`
+  }
+
+  function saveColumn(element) {
+    const tableName = tablesSelect.value;
+    const dbName = localStorage.getItem('dbName')
+
+      const inputs = element.parentNode.parentNode.children;
+      const columnName = inputs.item(1).children.item(0).value
+      if(columnName == null || columnName == ""){
+          alert("Insert column name!")
+          return;
+      }
+      const dataType = inputs.item(2).children.item(0).value
+      
+      fetch("http://localhost:5000/table/modify", {
+            method: 'PUT', 
+            headers: {
+                'Content-Type': "application/json",
+                'dbName': dbName,
+                'tableName': tableName,
+            },
+            body: JSON.stringify({
+                "columnName": columnName,
+                "dataType": dataType,
+            })
+            })
+            .then(res => res.json())
+            .then(json => {
+                if(json.success){
+                    alert("Column saved")
+                    const delete_element = element.parentNode.children.item(0)
+                    delete_element.setAttribute('onclick','removeColumn(this)');
+                    element.parentNode.children.item(1).remove()
+                }else{
+                    alert("Error")
+                }
+            })
+  }
+
+  function remove(e) {
+      return e.parentNode.parentNode.remove()
+  }
+
+  function existingField(i, columnName, dataType){
+    const nextRow = document.createElement("tr");
+    const rowContent = newExisitngField(i, columnName, dataType)
+    nextRow.innerHTML = rowContent.trim();
+    return nextRow;
+  }
+  function newExisitngField(i, columnName, dataType) {
+      const dataTypes = ["int","float","varchar"]
+      const index = dataTypes.indexOf(dataType);
+      if (index !== -1) {
+        dataTypes.splice(index, 1);
+      }
+
+      let optionList = `<option selected value="${dataType}">${dataType}</option>`
+      for(let i = 0; i < dataTypes.length; i++){
+          optionList += `<option value="${dataTypes[i]}">${dataTypes[i]}</option>`
+      }
+
+      return `
+            <th scope="row">${i}</th>
+            <td>
+                <input class="form-control col-8" type="text" placeholder="Insert name" value=${columnName}>
+            </td>
+            <td>
+                    <select class="form-control">
+                        ${optionList}
+                    </select>
+            </td>
+            <td>
+              <button onclick="removeColumn(this)" class="btn"><i class="fa fa-times"></i></button>
+            </td>`
+  }
+  function removeColumn(element){
+    const tableName = tablesSelect.value;
+    const dbName = localStorage.getItem('dbName')
+    
+    const inputs = element.parentNode.parentNode.children
+    const columnName = inputs.item(1).children.item(0).value
+
+    fetch("http://localhost:5000/table/modify", {
+            method: 'DELETE', 
+            headers: {
+                'Content-Type': "application/json",
+                'dbName': dbName,
+                'tableName': tableName,
+            },
+            body: JSON.stringify({
+                "columnName": columnName,
+            })
+            })
+            .then(res => res.json())
+            .then(json => {
+                if(json.success){
+                    alert("Column removed")
+                }else{
+                    alert("Error")
+                }
+            })
+    
+    element.parentNode.parentNode.remove()
+  }
+
+
+//   function updateColumn(element){
+//     const inputs = element.parentNode.parentNode.children
+//     const columnName = inputs.item(1).children.item(0).value
+//     const dataType = inputs.item(2).children.item(0).value
+
+//     fetch("http://localhost:5000/table/modify", {
+//             method: 'DELETE', 
+//             headers: {
+//                 'Content-Type': "application/json",
+//                 'dbName': dbName,
+//                 'tableName': tableName,
+//             },
+//             body: JSON.stringify({
+//                 "columnName": columnName,
+//                 "dataType": dataType
+//             })
+//             }).then(res => res.json())
+//             .then(json => {
+//                 console.log(json)
+//             })
+//   }
+</script>
+{% endblock %}

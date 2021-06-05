@@ -1,7 +1,8 @@
 
 <!-- Navigation -->
-<nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
   <div class="container">
+    <i class="fa fa-database text-white mr-3 fa-2x"></i>
     <a class="navbar-brand" href="/">SQLite Client</a>
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
@@ -9,13 +10,19 @@
     <div class="collapse navbar-collapse" id="navbarResponsive">
       <ul class="navbar-nav ml-auto">
         <li class="nav-item">
-          <a class="nav-link" href="/">Databases</a>
+          <a id="nav-0" class="nav-link" href="/">Databases</a>
         </li>
         <li class="nav-item">
-          <a onclick="handleCreate()" class="nav-link" href="javascript:void(0);">Create Table</a>
+          <a id="nav-1" onclick="handleCreate()" class="nav-link" href="javascript:void(0);">Create Table</a>
         </li>
         <li class="nav-item">
-          <a onclick="handleModify()" class="nav-link" href="javascript:void(0);">Modify Table</a>
+          <a id="nav-2" onclick="handleModify()" class="nav-link" href="javascript:void(0);">Modify Table</a>
+        </li>
+        <li class="nav-item">
+          <a id="nav-3" class="nav-link" href="/table/data">Table data</a>
+        </li>
+        <li class="nav-item">
+          <a id="nav-4" class="nav-link" href="/customquery">Custom query</a>
         </li>
       </ul>
     </div>
