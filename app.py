@@ -8,23 +8,38 @@ DEVELOPMENT_ENV = True
 
 app = Flask(__name__)
 
-app_data = {
-    "somedata": 'aaa',
-    "name": "Peter's Starter Template for a Flask Web App",
-    "description": "A basic Flask app using bootstrap for layout",
-    "author": "Peter Simeth",
-    "html_title": "Peter's Starter Template for a Flask Web App",
-    "project_name": "Starter Template",
-    "keywords": "flask, webapp, template, basic"
-}
-
 
 @app.route('/')
 def index():
     databases = db.getDatabaseNames()
     return render_template('index.html', databases=databases, len=len(databases))
 
-@app.route('/table/create', methods=['GET','POST'])
+
+@app.route('/table/modify', methods=['GET'])
+def table_modify_template():
+    return render_template('table_modify.html')
+
+
+@app.route('/table/data', methods=['GET'])
+def table_data_template():
+    return render_template('table_data.html')
+
+
+@app.route('/customquery', methods=['GET'])
+def custom_query_template():
+    return render_template('custom_query.html')
+
+
+@app.route('/table/data/<tableName>', methods=['GET'])
+def table_data_template_filled(tableName):
+    dbName = request.headers.get('dbName')
+    schema = db.getTableStructure(dbName, tableName)
+    data = db.getTableData(dbName, tableName)
+    return render_template('table_data_filled.html', tableName=tableName, schema=schema['resultList'],
+                           data=data['resultList'])
+
+
+@app.route('/table/create', methods=['GET', 'POST'])
 def table_create_template():
     if request.method == 'GET':
         return render_template('table_create.html')
@@ -37,7 +52,7 @@ def table_create_template():
                 or tableContent == None or dbName not in db.getDatabaseNames():
             return jsonify(success=False)
         else:
-            result = db.createTable(dbName,tableName, tableContent)
+            result = db.createTable(dbName, tableName, tableContent)
             if result["type"] == "ok":
                 return jsonify(success=True)
             else:
@@ -45,32 +60,88 @@ def table_create_template():
                 return jsonify(success=False)
 
 
-@app.route('/table/modify/<dbName>')
-def table_modify_template(dbName):
-    databases = db.getDatabaseNames()
-    return render_template('table_modify.html', databases=databases, len=len(databases))
+@app.route('/table/modify', methods=['DELETE', 'PUT'])
+def table_modify():
+    if request.method == "DELETE":
+        dbName = request.headers.get('dbName')
+        tableName = request.headers.get('tableName')
+        columnName = request.json['columnName']
 
-#
-# @app.route('/tables/<dbName>')
-# def tables(dbName):
-#     tables = db.getTableNames(dbName)
-#     return render_template('tables.html', tables=tables['resultList'], len=len(tables['resultList']))
+        if dbName == None or tableName == None \
+                or columnName == None or dbName not in db.getDatabaseNames():
+            return jsonify(success=False)
+        else:
+            result = db.deleteColumn(dbName, tableName, columnName)
+            result2 = db.deleteTable(dbName, tableName + "_old")
+
+            if result["type"] == "ok":
+                return jsonify(success=True)
+            else:
+                return jsonify(success=False)
+    else:
+        dbName = request.headers.get('dbName')
+        tableName = request.headers.get('tableName')
+        columnName = request.json['columnName']
+        dataType = request.json['dataType']
+        result = db.addColumn(dbName, tableName, columnName, dataType)
+
+        if result["type"] == "ok":
+            return jsonify(success=True)
+        else:
+            return jsonify(success=False)
 
 
-# @app.route('/schemas/<dbName>/<tableName>')
-# def schema(dbName,tableName):
-#     tableSchema = db.getTableStructure(dbName,tableName)
-#     return render_template('schema.html', rows=tableSchema['resultList'], len=len(tableSchema['resultList']))
+@app.route('/table/data/modify', methods=['DELETE', 'PUT'])
+def table_data_modify():
+    dbName = request.headers.get('dbName')
+    tableName = request.headers.get('tableName')
+    values = request.json['values']
 
-@app.route('/schemas/new/<dbName>/<tableName>')
-def newtableschema(dbName,tableName):
-    return render_template('newtable.html', tableName = tableName)
+    if dbName == None or tableName == None \
+            or dbName not in db.getDatabaseNames() or values == None:
+        return jsonify(success=False)
+
+    if request.method == "DELETE":
+        columns = request.json['columnNames']
+
+        if columns == None:
+            return jsonify(success=False)
+        else:
+            result = db.deleteRow(dbName, tableName, columns, values)
+            return jsonify(success=True)
+    else:
+        result = db.insertRow(dbName, tableName, values)
+        return jsonify(success=True)
 
 
+@app.route('/table', methods=['GET'])
+def get_tables():
+    dbName = request.headers.get('dbName')
+    return db.getTableNames(dbName)
 
-# @app.route('/data')
-# def data():
-#     return render_template('data.html', app_data=app_data)
+
+@app.route('/database', methods=['GET'])
+def get_databases():
+    return jsonify(db.getDatabaseNames()), 201
+
+
+@app.route('/table/schemas', methods=['GET'])
+def get_table_schema():
+    dbName = request.headers.get('dbName')
+    tableName = request.headers.get('tableName')
+    return db.getTableStructure(dbName, tableName)
+
+
+@app.route('/query', methods=['POST'])
+def custom_query():
+    dbName = request.headers.get('dbName')
+    queryString = request.json['query']
+    result = db.query(dbName, queryString)
+    if result['type'] == "ok":
+        return jsonify(output=result['msg'], success=True)
+    else:
+        return jsonify(output=result['msg'], success=False)
+
 
 @app.route('/database/create/<dbname>')
 def dbcreator(dbname):
