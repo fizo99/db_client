@@ -14,13 +14,13 @@
       </select>
     </div>
   </div>
-        <div class="form-group">
-          <label for="comment">Insert query</label>
-          <textarea id="query" class="form-control" rows="5" id="comment"></textarea>
-      </div>
-      <div class="d-flex flex-row-reverse mt-5">
-        <button id="executeBtn" class="btn btn-info col-2 ml-2">Execute</button>
-      </div>
+  <div class="form-group">
+    <label for="comment">Insert query</label>
+    <textarea id="query" class="form-control" rows="5" id="comment"></textarea>
+  </div>
+  <div class="d-flex flex-row-reverse mt-5">
+    <button id="executeBtn" class="btn btn-info col-2 ml-2">Execute</button>
+  </div>
 </div>
 <div id="output" class="container">
 
@@ -32,41 +32,41 @@
   const output = document.getElementById('output')
 
   document.getElementById("nav-4").className = "nav-link text-light"
-     window.onload = () => {
-        fetch("http://localhost:5000/database")
-            .then(res => res.json())
-            .then(json => {
-                const resultList = json;
-                for(let i = 0; i < resultList.length; i++){
-                    const option = document.createElement('option')
-                    option.value = resultList[i];
-                    option.innerText = resultList[i];
-                    dbList.appendChild(option)
-                }
-            })
-    }
-    executeBtn.addEventListener('click', (e) => {
-      const customQuery = query.value;
-      const dbName = dbList.value;
-      fetch("http://localhost:5000/query", {
-          method: 'POST', 
-          headers: {
-            'Content-Type': "application/json",
-            'dbName': dbName,
-          },
-          body: JSON.stringify({
-            'query': customQuery
-          })
-        }).then(res => res.json())
-        .then(json => {
-          if(json.success){
-            output.style.color = "green"
-            output.innerText = json.output
-          }else{
-            output.style.color = "red"
-            output.innerText = json.output
-          }
+  window.onload = () => {
+    fetch("http://localhost:5000/database")
+      .then(res => res.json())
+      .then(json => {
+        const resultList = json;
+        for (let i = 0; i < resultList.length; i++) {
+          const option = document.createElement('option')
+          option.value = resultList[i];
+          option.innerText = resultList[i];
+          dbList.appendChild(option)
+        }
+      })
+  }
+  executeBtn.addEventListener('click', (e) => {
+    const customQuery = query.value;
+    const dbName = dbList.value;
+    fetch("http://localhost:5000/query", {
+        method: 'POST',
+        headers: {
+          'Content-Type': "application/json",
+          'dbName': dbName,
+        },
+        body: JSON.stringify({
+          'query': customQuery
         })
-    })
+      }).then(res => res.json())
+      .then(json => {
+        if (json.success) {
+          output.style.color = "green"
+          output.innerText = "Query executed successfully"
+        } else {
+          output.style.color = "red"
+          output.innerText = "Error: " + json.msg
+        }
+      })
+  })
 </script>
 {% endblock %}

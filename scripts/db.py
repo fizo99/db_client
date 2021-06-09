@@ -1,15 +1,20 @@
-import os, fnmatch
+import os
+import fnmatch
 import sqlite3
-import json
 import numbers
+
+import random, string
 
 import re
 
+from db_client.scripts.exceptions.InvalidTypeException import InvalidTypeException
 from db_client.scripts.exceptions.DatabaseExistsException import DatabaseExistsException
-from db_client.scripts.exceptions.DbOperationException import DbOperationException
+from db_client.scripts.exceptions.DatabaseNotExistsException import DatabaseNotExistsException
 from db_client.scripts.exceptions.WrongNameException import WrongNameException
 
 REGEXP_ALPHANUMERIC = "^[a-zA-Z0-9_]*$"
+QUERY_GET_TABLE_NAMES = "SELECT name FROM sqlite_master WHERE type='table';"
+VALID_TYPES = ['varchar', 'int', 'float']
 
 
 def getDatabaseNames():
@@ -22,83 +27,67 @@ def getDatabaseNames():
     return result
 
 
-def query(dbName, queryString):
-    connection = None
+def query(dbName: str, queryString: str):
+    if dbName not in getDatabaseNames():
+        raise DatabaseNotExistsException(dbName)
+
+    conn = None
     try:
         path = os.path.join(os.getcwd(), 'databases', dbName)
-        connection = sqlite3.connect(path)
-        cur = connection.cursor()
+        conn = sqlite3.connect(path)
+        cur = conn.cursor()
         cur.execute(queryString)
 
-        connection.commit()
-        return {
-            "type": "ok",
-            "msg": "Query executed successfully"
-        }
-
-    except sqlite3.Error as e:
-        return {
-            "type": "error",
-            "msg": "An error occurred: " + e.args[0]
-        }
+        conn.commit()
+    except (sqlite3.OperationalError, sqlite3.Error) as e:
+        raise e
     finally:
-        if connection:
-            connection.close()
+        if conn:
+            conn.close()
 
 
-def getTableNames(dbName):
-    connection = None
+def getTableNames(dbName: str):
+    if dbName not in getDatabaseNames():
+        raise DatabaseNotExistsException(dbName)
+
+    conn = None
     try:
         path = os.path.join(os.getcwd(), 'databases', dbName)
-        connection = sqlite3.connect(path)
-        cur = connection.cursor()
-        cur.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        conn = sqlite3.connect(path)
+        cur = conn.cursor()
+        cur.execute(QUERY_GET_TABLE_NAMES)
 
         rows = cur.fetchall()
-        return {
-            "type": "ok",
-            "resultList": [x for x, in rows]
-        }
-
+        return [x for x, in rows]
     except sqlite3.Error as e:
-        return {
-            "type": "error",
-            "msg": "An error occurred: " + e.args[0]
-        }
+        raise e
     finally:
-        if connection:
-            connection.close()
+        if conn:
+            conn.close()
 
 
-def getTableStructure(dbName, tableName):
-    connection = None
+def getTableStructure(dbName: str, tableName: str):
+    if dbName not in getDatabaseNames():
+        raise DatabaseNotExistsException(dbName)
+
+    conn = None
     try:
         path = os.path.join(os.getcwd(), 'databases', dbName)
-        connection = sqlite3.connect(path)
-        cur = connection.cursor()
+        conn = sqlite3.connect(path)
+        cur = conn.cursor()
         cur.execute(f'pragma table_info({tableName});')
 
-        # lp., column_name, column_type,
         rows = cur.fetchall()
-        result = [{
+        return [{
             "lp": x,
             "column_name": y,
             "data_type": z
         } for x, y, z, _, _, _ in rows]
-
-        return {
-            "type": "ok",
-            "resultList": result
-        }
-
     except sqlite3.Error as e:
-        return {
-            "type": "error",
-            "msg": "An error occurred: " + e.args[0]
-        }
+        raise e
     finally:
-        if connection:
-            connection.close()
+        if conn:
+            conn.close()
 
 
 def createDB(dbName: str):
@@ -114,52 +103,67 @@ def createDB(dbName: str):
     conn = None
     try:
         path = os.path.join(os.getcwd(), 'databases', dbName)
-        connection = sqlite3.connect(path)
+        conn = sqlite3.connect(path)
     except sqlite3.Error as e:
-        raise DbOperationException("Db error:" + e.args[0])
+        raise e
     finally:
         if conn:
             conn.close()
 
 
 def createTable(dbName, tableName, tableContent):
+    if dbName not in getDatabaseNames():
+        raise DatabaseNotExistsException(dbName)
+
     tableContent = list(tableContent)
     statement = f'create table {tableName}('
     for column in tableContent:
+        if column['data_type'] not in VALID_TYPES:
+            raise InvalidTypeException(column['data_type'])
         statement += column['column_name'] + " " + column['data_type'] + ","
     statement = "".join(list(statement)[:-1]) + ");"
 
     conn = None
     try:
         path = os.path.join(os.getcwd(), 'databases', dbName)
-        connection = sqlite3.connect(path)
-        cur = connection.cursor()
+        conn = sqlite3.connect(path)
+        cur = conn.cursor()
         cur.execute(statement)
-        return {
-            "type": "ok",
-            "msg": "Table created"
-        }
-    except sqlite3.Error as e:
-        return {
-            "type": "error",
-            "msg": "An error occurred: " + e.args[0]
-        }
+    except (sqlite3.Error, sqlite3.OperationalError) as e:
+        raise e
     finally:
         if conn:
             conn.close()
 
 
 def deleteColumn(dbName, tableName, columnName):
+    if dbName not in getDatabaseNames():
+        raise DatabaseNotExistsException(dbName)
+
     # rename old table
-    tableStructure = getTableStructure(dbName, tableName)['resultList']
-    renameTable(dbName, tableName, tableName + "_old")
+    tempName = tableName + "_temp"
+
+    tableStructure = None
+    try:
+        tableStructure = getTableStructure(dbName, tableName)
+        renameTable(dbName, tableName, tempName)
+    except Exception as e:
+        raise e
 
     # create new table
     for x in tableStructure:
         if x['column_name'] == columnName:
             tableStructure.remove(x)
 
-    createTable(dbName, tableName, tableStructure)
+    if len(tableStructure) == 0:
+        renameTable(dbName, tempName, tableName)
+        raise Exception("Table can`t have 0 columns")
+
+    try:
+        createTable(dbName, tableName, tableStructure)
+    except Exception as e:
+        renameTable(dbName, tempName, tableName)
+        raise e
 
     statement = f"insert into {tableName}("
     for x in tableStructure:
@@ -167,177 +171,152 @@ def deleteColumn(dbName, tableName, columnName):
     statement = "".join(list(statement)[:-1]) + ") SELECT "
     for x in tableStructure:
         statement += x["column_name"] + ","
-    statement = "".join(list(statement)[:-1]) + f" FROM {tableName}_old;"
+    statement = "".join(list(statement)[:-1]) + f" FROM {tempName};"
 
     conn = None
     try:
         path = os.path.join(os.getcwd(), 'databases', dbName)
-        connection = sqlite3.connect(path)
-        cur = connection.cursor()
+        conn = sqlite3.connect(path)
+        cur = conn.cursor()
         cur.execute(statement)
-
-        return {
-            "type": "ok",
-            "msg": "Column deleted"
-        }
-    except sqlite3.Error as e:
+        conn.close()
+        deleteTable(dbName, tempName)
+    except (sqlite3.Error, sqlite3.OperationalError) as e:
         deleteTable(dbName, tableName)
-        renameTable(dbName, tableName + "_old", tableName)
-        return {
-            "type": "error",
-            "msg": "An error occurred: " + e.args[0]
-        }
+        renameTable(dbName, tempName, tableName)
+        raise e
     finally:
         if conn:
             conn.close()
 
 
 def deleteTable(dbName, tableName):
+    if dbName not in getDatabaseNames():
+        raise DatabaseNotExistsException(dbName)
+
     statement = f"Drop table {tableName};"
 
     conn = None
     try:
         path = os.path.join(os.getcwd(), 'databases', dbName)
-        connection = sqlite3.connect(path)
-        cur = connection.cursor()
+        conn = sqlite3.connect(path)
+        cur = conn.cursor()
         cur.execute(statement)
-        return {
-            "type": "ok",
-            "msg": "Table deleted"
-        }
     except sqlite3.Error as e:
-        return {
-            "type": "error",
-            "msg": "An error occurred: " + e.args[0]
-        }
+        raise e
     finally:
         if conn:
             conn.close()
 
 
 def getTableData(dbName, tableName):
+    if dbName not in getDatabaseNames():
+        raise DatabaseNotExistsException(dbName)
+
     statement = f"select * from {tableName};"
 
     conn = None
     try:
         path = os.path.join(os.getcwd(), 'databases', dbName)
-        connection = sqlite3.connect(path)
-        cur = connection.cursor()
+        conn = sqlite3.connect(path)
+        cur = conn.cursor()
         cur.execute(statement)
 
         rows = cur.fetchall()
 
-        return {
-            "type": "ok",
-            "resultList": rows
-        }
+        return rows
     except sqlite3.Error as e:
-        return {
-            "type": "error",
-            "msg": "An error occurred: " + e.args[0]
-        }
+        raise e
     finally:
         if conn:
             conn.close()
 
 
 def addColumn(dbName, tableName, columnName, dataType):
+    if dbName not in getDatabaseNames():
+        raise DatabaseNotExistsException(dbName)
+
+    if dataType not in ['int', 'varchar', 'float']:
+        raise InvalidTypeException
+
     statement = f"alter table {tableName} add column {columnName} {dataType};"
 
     conn = None
     try:
         path = os.path.join(os.getcwd(), 'databases', dbName)
-        connection = sqlite3.connect(path)
-        cur = connection.cursor()
+        conn = sqlite3.connect(path)
+        cur = conn.cursor()
         cur.execute(statement)
-        return {
-            "type": "ok",
-            "msg": "Column added"
-        }
     except sqlite3.Error as e:
-        return {
-            "type": "error",
-            "msg": "An error occurred: " + e.args[0]
-        }
+        raise e
     finally:
         if conn:
             conn.close()
 
 
 def deleteRow(dbName, tableName, columnNames, values):
+    if dbName not in getDatabaseNames():
+        raise DatabaseNotExistsException(dbName)
+
     statement = f"delete from {tableName} where "
     for columnName, value in zip(columnNames, values):
-        value = " is null" if value == None else f"={value}"
-        statement += f"{columnName}{value} and "
+        value = " is null" if value is None else f"{value}" if isinstance(value, numbers.Number) else f"'{value}'"
+        statement += f"{columnName}={value} and "
     statement = "".join(list(statement)[:-5]) + ";"
 
     conn = None
     try:
         path = os.path.join(os.getcwd(), 'databases', dbName)
-        connection = sqlite3.connect(path)
-        cur = connection.cursor()
+        conn = sqlite3.connect(path)
+        cur = conn.cursor()
         cur.execute(statement)
-        connection.commit()
-        return {
-            "type": "ok",
-            "msg": "Row deleted"
-        }
+        conn.commit()
     except sqlite3.Error as e:
-        return {
-            "type": "error",
-            "msg": "An error occurred: " + e.args[0]
-        }
+        raise e
     finally:
         if conn:
             conn.close()
 
 
 def insertRow(dbName, tableName, values):
+    if dbName not in getDatabaseNames():
+        raise DatabaseNotExistsException(dbName)
+
     statement = f"insert into {tableName} values("
 
     for value in values:
-        value = "null" if value == None else f"{value}" if isinstance(value, numbers.Number) else f"'{value}'"
+        value = "null" if value is None else f"{value}" if isinstance(value, numbers.Number) else f"'{value}'"
         statement += f"{value},"
     statement = "".join(list(statement)[:-1]) + ");"
 
     conn = None
     try:
         path = os.path.join(os.getcwd(), 'databases', dbName)
-        connection = sqlite3.connect(path)
-        cur = connection.cursor()
+        conn = sqlite3.connect(path)
+        cur = conn.cursor()
         cur.execute(statement)
-        connection.commit()
-        return {
-            "type": "ok",
-            "msg": "Row inserted"
-        }
+        conn.commit()
     except sqlite3.Error as e:
-        return {
-            "type": "error",
-            "msg": "An error occurred: " + e.args[0]
-        }
+        raise e
     finally:
         if conn:
             conn.close()
 
 
 def renameTable(dbName, tableName, newTableName):
-    statement = f'alter table {tableName} rename to {newTableName};'
+    if dbName not in getDatabaseNames():
+        raise DatabaseNotExistsException(dbName)
+
+    statement = f'alter table \'{tableName}\' rename to \'{newTableName}\';'
+
     conn = None
     try:
         path = os.path.join(os.getcwd(), 'databases', dbName)
-        connection = sqlite3.connect(path)
-        cur = connection.cursor()
+        conn = sqlite3.connect(path)
+        cur = conn.cursor()
         cur.execute(statement)
-        return {
-            "type": "ok",
-            "msg": "Table renamed"
-        }
     except sqlite3.Error as e:
-        return {
-            "type": "error",
-            "msg": "An error occurred: " + e.args[0]
-        }
+        raise e
     finally:
         if conn:
             conn.close()

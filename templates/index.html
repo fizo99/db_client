@@ -2,59 +2,54 @@
 
 {% block body %}
 <div class="jumbotron bg-white shadow p-3 mb-5 rounded">
-    <h1 class="display-4 mb-5">Databases</h1>
-    <table class="table">
-      <thead>
-        <tr>
-          <th scope="col">#</th>
-          <th scope="col">Name</th>
-          <th scope="col"></th>
-        </tr>
-      </thead>
-      <tbody>
+  <h1 class="display-4 mb-5">Databases</h1>
+  <table class="table">
+    <thead>
+      <tr>
+        <th scope="col">#</th>
+        <th scope="col">Name</th>
+        <th scope="col"></th>
+      </tr>
+    </thead>
+    <tbody>
       {%for i in range(0, len)%}
-        <tr>
-          <th scope="row">{{i}}</th>
-          <td>{{databases[i]}}</td>
-          <td><button data-arg={{databases[i]}} onClick="chooseDB()" class="btn btn-link">Choose</button></td>
-        </tr>
+      <tr>
+        <th scope="row">{{i}}</th>
+        <td>{{databases[i]}}</td>
+        <td><button data-arg={{databases[i]}} onClick="chooseDB()" class="btn btn-link">Choose</button></td>
+      </tr>
       {%endfor%}
-      </tbody>
-    </table>
-    <div class="d-flex flex-row-reverse mt-5">
-      <button onClick="createDB()" class="btn btn-info col-2 ml-2">Create</button>
-      <input class="form-control col-3" type="text" id="dbNameField" placeholder="DB name">
-    </div>
+    </tbody>
+  </table>
+  <div class="d-flex flex-row-reverse mt-5">
+    <button onClick="createDB()" class="btn btn-info col-2 ml-2">Create</button>
+    <input class="form-control col-3" type="text" id="dbNameField" placeholder="DB name">
+  </div>
 </div>
 <script>
   document.getElementById("nav-0").className = "nav-link text-light"
-  async function chooseDB(){
+  async function chooseDB() {
     let dbName = event.target.getAttribute('data-arg');
-    localStorage.setItem('dbName',dbName)
+    localStorage.setItem('dbName', dbName)
 
     window.location.replace(`http://localhost:5000/table/create`);
   }
-  async function createDB(){
+  async function createDB() {
     const name = document.querySelector("#dbNameField").value;
-    if(name.includes(".")){
+    if (name.includes(".")) {
       alert("Insert name without extension");
       return;
     }
     fetch(`http://localhost:5000/database/create/${name}`)
-    .then(res => {
-      if(res.ok)
-        return res.json()
-      else
-        throw new Exception(); 
-    })
-    .then(json => {
-      alert("Database created")
-      window.location.replace(`http://localhost:5000`);
-    })
-    .catch(ex => {
-      alert("Error while creating database")
-    })
-
+      .then(res => res.json())
+      .then(json => {
+        if(json.success){
+          alert("Database created")
+          window.location.replace(`http://localhost:5000`);
+        }else{
+          alert("Error: " + json.msg)
+        }
+      })
   }
 </script>
 {% endblock %}

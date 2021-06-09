@@ -15,19 +15,23 @@
     window.onload = () => {
         const dbName = localStorage.getItem('dbName')
         fetch("http://localhost:5000/table", {
-            method: 'GET', 
-            headers: {
-                'Content-Type': "application/json",
-                'dbName': dbName,
-            },
+                method: 'GET',
+                headers: {
+                    'Content-Type': "application/json",
+                    'dbName': dbName,
+                },
             }).then(res => res.json())
             .then(json => {
-                const resultList = json.resultList;
-                for(let i = 0; i < resultList.length; i++){
-                    const option = document.createElement('option')
-                    option.value = resultList[i];
-                    option.innerText = resultList[i];
-                    tablesSelect.appendChild(option)
+                if (json.success) {
+                    const resultList = json.names;
+                    for (let i = 0; i < resultList.length; i++) {
+                        const option = document.createElement('option')
+                        option.value = resultList[i];
+                        option.innerText = resultList[i];
+                        tablesSelect.appendChild(option)
+                    }
+                } else {
+                    alert("Error when fetching tables: " + json.msg)
                 }
             })
     }
@@ -36,11 +40,12 @@
         localStorage.setItem('tableName', tableName)
         const dbName = localStorage.getItem('dbName')
         fetch(`http://localhost:5000/table/data/${tableName}`, {
-            method: 'GET', 
-            headers: {
-                'Content-Type': "application/json",
-                'dbName': dbName
-            }}).then(res => res.text())
+                method: 'GET',
+                headers: {
+                    'Content-Type': "application/json",
+                    'dbName': dbName
+                }
+            }).then(res => res.text())
             .then(text => {
                 document.body.innerHTML = text
                 const container = document.querySelector(".jumbotron")
@@ -49,103 +54,106 @@
             })
     });
 
-    function newField(){
-       const fields = document.getElementById('fields');
-       fields.appendChild(newFieldTemplate.cloneNode(true));
-     }
-    function remove(e){
+    function newField() {
+        const fields = document.getElementById('fields');
+        fields.appendChild(newFieldTemplate.cloneNode(true));
+    }
+
+    function remove(e) {
         return e.parentNode.parentNode.remove()
     }
-    function save(e){
+
+    function save(e) {
         const tableValues = e.parentNode.parentNode.children;
         const values = []
-        for(let i = 0; i < tableValues.length-2; i++){
+        for (let i = 0; i < tableValues.length - 2; i++) {
             const el = tableValues.item(i).children.item(0)
             const pattern = el.getAttribute("pattern");
-            if(pattern != null){
+            if (pattern != null) {
                 const re = new RegExp(pattern);
                 if (!re.test(el.value)) {
                     alert("Invalid values!")
                     el.style.borderColor = "red";
                     return;
-                }else{
+                } else {
                     el.style.borderColor = "";
                 }
             }
-            
+
             const value = el.value;
             values.push(value)
         }
-        
+
         const dbName = localStorage.getItem('dbName')
         const tableName = localStorage.getItem('tableName')
 
         fetch("http://localhost:5000/table/data/modify", {
-            method: 'PUT', 
-            headers: {
-                'Content-Type': "application/json",
-                'dbName': dbName,
-                'tableName': tableName,
-            },
-            body: JSON.stringify({
-                "values": values,
-            })
+                method: 'PUT',
+                headers: {
+                    'Content-Type': "application/json",
+                    'dbName': dbName,
+                    'tableName': tableName,
+                },
+                body: JSON.stringify({
+                    "values": values,
+                })
             })
             .then(res => res.json())
             .then(json => {
-                if(json.success){
+                if (json.success) {
                     alert("Row inserted!")
-                    for(let i = 0; i < tableValues.length-2; i++){
+                    for (let i = 0; i < tableValues.length - 2; i++) {
                         const el = tableValues.item(i).children.item(0)
                         const val = el.value
-                        
+
                         tableValues.item(i).innerHTML = val
                     }
-                    tableValues.item(tableValues.length-1).remove()
-                    
-                    const delete_element = tableValues.item(tableValues.length-1).children.item(0)
-                    delete_element.setAttribute('onclick','removeFromDb(this)');
-                }else{
+                    tableValues.item(tableValues.length - 1).remove()
+
+                    const delete_element = tableValues.item(tableValues.length - 1).children.item(0)
+                    delete_element.setAttribute('onclick', 'removeFromDb(this)');
+                } else {
                     alert("Error!")
                 }
             })
     }
-    function removeFromDb(e){
+
+    function removeFromDb(e) {
         const tableHeaders = e.parentNode.parentNode.parentNode.parentNode.children.item(0).children.item(0).children
         const columnNames = []
         const values = []
-        for(let i = 0; i < tableHeaders.length; i++){
+        for (let i = 0; i < tableHeaders.length; i++) {
             const nameWithType = tableHeaders.item(i).innerText
             const id = nameWithType.indexOf("(")
-            columnNames.push(nameWithType.substring(0,id-1))
+            columnNames.push(nameWithType.substring(0, id - 1))
         }
-        
+
         const tableValues = e.parentNode.parentNode.children;
-        for(let i = 0; i < tableValues.length-1; i++){
+        for (let i = 0; i < tableValues.length - 1; i++) {
             const value = tableValues.item(i).innerText == "None" ? null : tableValues.item(i).innerText
             values.push(value)
         }
-        
+
         const dbName = localStorage.getItem('dbName')
         const tableName = localStorage.getItem('tableName')
         fetch("http://localhost:5000/table/data/modify", {
-            method: 'DELETE', 
-            headers: {
-                'Content-Type': "application/json",
-                'dbName': dbName,
-                'tableName': tableName,
-            },
-            body: JSON.stringify({
-                "columnNames": columnNames,
-                "values": values,
-            })
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': "application/json",
+                    'dbName': dbName,
+                    'tableName': tableName,
+                },
+                body: JSON.stringify({
+                    "columnNames": columnNames,
+                    "values": values,
+                })
             })
             .then(res => res.json())
             .then(json => {
-                if(json.success){
+                if (json.success) {
                     alert("Row deleted!")
                     remove(e)
-                }else{
+                } else {
                     alert("Error!")
                 }
             })

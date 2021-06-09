@@ -4,50 +4,50 @@
     <h1 class="display-4 mb-5">Table data</h1>
     <table class="table" style="overflow-x: scroll;">
         <thead>
-        <tr>
-            {%for x in schema%}
-            <th>
-                <b>{{x['column_name']}}</b><br> ({{x['data_type']}})
-            </th>
-            {%endfor%}
-         </tr>
+            <tr>
+                {%for x in schema%}
+                <th>
+                    <b>{{x['column_name']}}</b><br> ({{x['data_type']}})
+                </th>
+                {%endfor%}
+            </tr>
         </thead>
         <tbody id="fields">
-        {%for values in data%}
-        <tr>
-            {%for value in values%}
+            {%for values in data%}
+            <tr>
+                {%for value in values%}
                 <td>
                     {{value}}
                 </td>
+                {%endfor%}
+                <td>
+                    <button onclick="removeFromDb(this)" class="btn"><i class="fa fa-times"></i></button>
+                </td>
+            </tr>
             {%endfor%}
-            <td>
-                <button onclick="removeFromDb(this)" class="btn"><i class="fa fa-times"></i></button>
-            </td>
-        </tr>
-        {%endfor%}
-        <tr id="newFieldTemplate">
-            {%for x in schema%}
-            <td>
-                {% if x['data_type'] == "int" %}
-                <input pattern="^([+-]?[1-9]\d*|0)$" class="form-control" type="text">
-                {% elif x['data_type'] == "float" %}
-                <input pattern="[+-]?([0-9]*[.])?[0-9]+" class="form-control" type="text">
-                {% else %}
-                <input class="form-control" type="text">
-                {% endif %}
-            </td>
-            {%endfor%}
-            <td>
-                <button onclick="remove(this)" class="btn"><i class="fa fa-times"></i></button>
-            </td>
-            <td>
-                <button onclick="save(this)" class="btn"><i class="fa fa-save"></i></button>
-            </td>
-         </tr>
+            <tr id="newFieldTemplate">
+                {%for x in schema%}
+                <td>
+                    {% if x['data_type'] == "int" %}
+                    <input pattern="^([+-]?[1-9]\d*|0)$" class="form-control" type="text">
+                    {% elif x['data_type'] == "float" %}
+                    <input pattern="[+-]?([0-9]*[.])?[0-9]+" class="form-control" type="text">
+                    {% else %}
+                    <input class="form-control" type="text">
+                    {% endif %}
+                </td>
+                {%endfor%}
+                <td>
+                    <button onclick="remove(this)" class="btn"><i class="fa fa-times"></i></button>
+                </td>
+                <td>
+                    <button onclick="save(this)" class="btn"><i class="fa fa-save"></i></button>
+                </td>
+            </tr>
         </tbody>
-      </table>
-      <div class="d-flex flex-row-reverse mt-5">
+    </table>
+    <div class="d-flex flex-row-reverse mt-5">
         <button onClick="newField()" class="btn btn-secondary col-2 ml-2">Add field</button>
-      </div>
+    </div>
 </div>
 {% endblock %}

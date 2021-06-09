@@ -9,7 +9,9 @@ DEVELOPMENT_ENV = True
 app = Flask(__name__)
 
 
-@app.route('/')
+## TEMPLATES
+
+@app.route('/', methods=['GET'])
 def index():
     databases = db.getDatabaseNames()
     return render_template('index.html', databases=databases, len=len(databases))
@@ -33,10 +35,13 @@ def custom_query_template():
 @app.route('/table/data/<tableName>', methods=['GET'])
 def table_data_template_filled(tableName):
     dbName = request.headers.get('dbName')
-    schema = db.getTableStructure(dbName, tableName)
-    data = db.getTableData(dbName, tableName)
-    return render_template('table_data_filled.html', tableName=tableName, schema=schema['resultList'],
-                           data=data['resultList'])
+    try:
+        schema = db.getTableStructure(dbName, tableName)
+        data = db.getTableData(dbName, tableName)
+        print(schema, data)
+        return render_template('table_data_filled.html', tableName=tableName, schema=schema, data=data)
+    except Exception as e:
+        return jsonify(success=False, msg=e.args[0])
 
 
 @app.route('/table/create', methods=['GET', 'POST'])
@@ -47,48 +52,32 @@ def table_create_template():
         dbName = request.headers.get('dbName')
         tableName = request.headers.get('tableName')
         tableContent = request.json
-
-        if dbName == None or tableName == None \
-                or tableContent == None or dbName not in db.getDatabaseNames():
-            return jsonify(success=False)
-        else:
-            result = db.createTable(dbName, tableName, tableContent)
-            if result["type"] == "ok":
-                return jsonify(success=True)
-            else:
-                print(result)
-                return jsonify(success=False)
+        print(dbName, tableName, tableContent)
+        try:
+            db.createTable(dbName, tableName, tableContent)
+            return jsonify(success=True)
+        except Exception as e:
+            return jsonify(success=False, msg=e.args[0])
 
 
 @app.route('/table/modify', methods=['DELETE', 'PUT'])
 def table_modify():
+    dbName = request.headers.get('dbName')
+    tableName = request.headers.get('tableName')
+    columnName = request.json['columnName']
     if request.method == "DELETE":
-        dbName = request.headers.get('dbName')
-        tableName = request.headers.get('tableName')
-        columnName = request.json['columnName']
-
-        if dbName == None or tableName == None \
-                or columnName == None or dbName not in db.getDatabaseNames():
-            return jsonify(success=False)
-        else:
-            result = db.deleteColumn(dbName, tableName, columnName)
-            result2 = db.deleteTable(dbName, tableName + "_old")
-
-            if result["type"] == "ok":
-                return jsonify(success=True)
-            else:
-                return jsonify(success=False)
-    else:
-        dbName = request.headers.get('dbName')
-        tableName = request.headers.get('tableName')
-        columnName = request.json['columnName']
-        dataType = request.json['dataType']
-        result = db.addColumn(dbName, tableName, columnName, dataType)
-
-        if result["type"] == "ok":
+        try:
+            db.deleteColumn(dbName, tableName, columnName)
             return jsonify(success=True)
-        else:
-            return jsonify(success=False)
+        except Exception as e:
+            return jsonify(success=False, msg=e.args[0])
+    else:
+        dataType = request.json['dataType']
+        try:
+            db.addColumn(dbName, tableName, columnName, dataType)
+            return jsonify(success=True)
+        except Exception as e:
+            return jsonify(success=False, msg=e.args[0])
 
 
 @app.route('/table/data/modify', methods=['DELETE', 'PUT'])
@@ -97,27 +86,28 @@ def table_data_modify():
     tableName = request.headers.get('tableName')
     values = request.json['values']
 
-    if dbName == None or tableName == None \
-            or dbName not in db.getDatabaseNames() or values == None:
-        return jsonify(success=False)
-
     if request.method == "DELETE":
         columns = request.json['columnNames']
-
-        if columns == None:
-            return jsonify(success=False)
-        else:
-            result = db.deleteRow(dbName, tableName, columns, values)
+        try:
+            db.deleteRow(dbName, tableName, columns, values)
             return jsonify(success=True)
+        except Exception as e:
+            return jsonify(success=False, msg=e.args[0])
     else:
-        result = db.insertRow(dbName, tableName, values)
-        return jsonify(success=True)
+        try:
+            db.insertRow(dbName, tableName, values)
+            return jsonify(success=True)
+        except Exception as e:
+            return jsonify(success=False, msg=e.args[0])
 
 
 @app.route('/table', methods=['GET'])
 def get_tables():
     dbName = request.headers.get('dbName')
-    return db.getTableNames(dbName)
+    try:
+        return jsonify(success=True, names=db.getTableNames(dbName))
+    except Exception as e:
+        return jsonify(success=False, msg=e.args[0])
 
 
 @app.route('/database', methods=['GET'])
@@ -129,27 +119,30 @@ def get_databases():
 def get_table_schema():
     dbName = request.headers.get('dbName')
     tableName = request.headers.get('tableName')
-    return db.getTableStructure(dbName, tableName)
+    try:
+        return jsonify(success=True, schemas=db.getTableStructure(dbName, tableName))
+    except Exception as e:
+        return jsonify(success=False, msg=e.args[0])
 
 
 @app.route('/query', methods=['POST'])
 def custom_query():
     dbName = request.headers.get('dbName')
     queryString = request.json['query']
-    result = db.query(dbName, queryString)
-    if result['type'] == "ok":
-        return jsonify(output=result['msg'], success=True)
-    else:
-        return jsonify(output=result['msg'], success=False)
+    try:
+        db.query(dbName, queryString)
+        return jsonify(success=True)
+    except Exception as e:
+        return jsonify(success=False, msg=e.args[0])
 
 
 @app.route('/database/create/<dbname>')
 def dbcreator(dbname):
-    result = db.createDB(dbname)
-    if result['type'] == 'ok':
-        return result, 201
-    else:
-        return result, 400
+    try:
+        db.createDB(dbname)
+        return jsonify(success=True)
+    except Exception as e:
+        return jsonify(success=False, msg=e.args[0])
 
 
 if __name__ == '__main__':
