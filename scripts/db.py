@@ -7,10 +7,10 @@ import random, string
 
 import re
 
-from db_client.scripts.exceptions.InvalidTypeException import InvalidTypeException
-from db_client.scripts.exceptions.DatabaseExistsException import DatabaseExistsException
-from db_client.scripts.exceptions.DatabaseNotExistsException import DatabaseNotExistsException
-from db_client.scripts.exceptions.WrongNameException import WrongNameException
+from .exceptions.InvalidTypeException import InvalidTypeException
+from .exceptions.DatabaseExistsException import DatabaseExistsException
+from .exceptions.DatabaseNotExistsException import DatabaseNotExistsException
+from .exceptions.WrongNameException import WrongNameException
 
 REGEXP_ALPHANUMERIC = "^[a-zA-Z0-9_]*$"
 QUERY_GET_TABLE_NAMES = "SELECT name FROM sqlite_master WHERE type='table';"
@@ -308,7 +308,7 @@ def renameTable(dbName, tableName, newTableName):
         raise DatabaseNotExistsException(dbName)
 
     statement = f'alter table \'{tableName}\' rename to \'{newTableName}\';'
-
+    print(statement)
     conn = None
     try:
         path = os.path.join(os.getcwd(), 'databases', dbName)

@@ -13,6 +13,11 @@
     let newFieldTemplate;
     const tablesSelect = document.getElementById("tables")
     window.onload = () => {
+        if(!localStorage.getItem('dbName')){
+            alert("Choose database!")
+            window.location.replace(`http://localhost:5000`);
+            return;
+        }
         const dbName = localStorage.getItem('dbName')
         fetch("http://localhost:5000/table", {
                 method: 'GET',
@@ -51,6 +56,7 @@
                 const container = document.querySelector(".jumbotron")
                 container.insertBefore(tablesSelect, container.children.item(1))
                 newFieldTemplate = document.getElementById('newFieldTemplate').cloneNode(true)
+                document.getElementById("nav-3").className = "nav-link text-light"
             })
     });
 

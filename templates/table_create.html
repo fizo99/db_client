@@ -38,6 +38,14 @@
 <script>
   document.getElementById("nav-1").className = "nav-link text-light"
   const table = document.getElementById("fields")
+
+  window.onload = () => {
+    if (!localStorage.getItem('dbName')) {
+      alert("Choose database!")
+      window.location.replace(`http://localhost:5000`);
+      return;
+    }
+  }
   async function save() {
     const dbName = localStorage.getItem('dbName')
     const tableName = document.getElementById('tableNameField').value;

@@ -27,6 +27,11 @@
     const tablesSelect = document.getElementById("tables")
     const fields = document.getElementById("fields")
     window.onload = () => {
+        if(!localStorage.getItem('dbName')){
+            alert("Choose database!")
+            window.location.replace(`http://localhost:5000`);
+            return;
+        }
         const dbName = localStorage.getItem('dbName')
         fetch("http://localhost:5000/table", {
                 method: 'GET',

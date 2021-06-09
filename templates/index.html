@@ -27,6 +27,14 @@
   </div>
 </div>
 <script>
+  window.onload = () => {
+    if(localStorage.getItem("dbName")){
+      localStorage.removeItem("dbName")
+    }
+    if(localStorage.getItem("tableName")){
+      localStorage.removeItem("tableName")
+    }
+  }
   document.getElementById("nav-0").className = "nav-link text-light"
   async function chooseDB() {
     let dbName = event.target.getAttribute('data-arg');
